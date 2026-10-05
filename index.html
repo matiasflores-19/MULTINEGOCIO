@@ -47,7 +47,8 @@ let last="",tm;
 function login(m){$("#app").classList.remove("wide");$("#app").innerHTML=`<div style="min-height:80vh;display:flex;align-items:center;justify-content:center"><div class="card" style="width:100%;max-width:360px;margin:0 auto"><h1>${brand()}</h1><label>Email</label><input id="em" type="email"><label>Contraseña</label><input id="pw" type="password" onkeydown="if(event.key==='Enter')entrar()"><br><br><button onclick="entrar()">Entrar</button><div class="mu" style="margin-top:8px">${m||""}</div></div></div>`}
 async function entrar(){const{error}=await sb.auth.signInWithPassword({email:$("#em").value,password:$("#pw").value});if(error)return login("Datos incorrectos");init()}
 async function salir(){await sb.auth.signOut();clearInterval(tm);NEG=null;NEGNOMBRE="";CFG={...CFGD};try{localStorage.removeItem("cfg")}catch(e){}document.title="Gestión";login()}
-async function cargar(){await cargarRep();const{data,error}=await sb.from("ordenes").select("id,num,data");if(error){msg="Sin conexión: "+error.message;if(view==="list")render();return}
+async function todo(t,c,ord){let all=[],i=0;for(;;){let q=sb.from(t).select(c);if(ord)q=q.order(ord);const{data,error}=await q.range(i,i+999);if(error)return{data:null,error};all=all.concat(data);if(data.length<1000)break;i+=1000}return{data:all,error:null}}
+async function cargar(){await cargarRep();const{data,error}=await todo("ordenes","id,num,data","num");if(error){msg="Sin conexión: "+error.message;if(view==="list")render();return}
  const d=data.map(r=>({...r.data,id:r.id,num:r.num})),j=JSON.stringify(d);if(j!==last||msg||repCh){repCh=false;last=j;msg="";orders=d.sort((a,b)=>(b.num||0)-(a.num||0));if(view==="list")render()}}
 async function init(){const{data:{session}}=await sb.auth.getSession();if(!session)return login();if(!await cargarNeg())return sinNegocio();await cargarCfg();CFG.nombre=CFG.nombre||NEGNOMBRE||"Mi negocio";render();await cargar();const q0=new URLSearchParams(location.search).get("orden");if(q0&&orders.find(o=>o.id===q0)){history.replaceState(null,"","/");abrir(q0)}clearInterval(tm);tm=setInterval(()=>{if(view==="list")cargar()},15000)}
 function render(){
@@ -60,7 +61,7 @@ function listEq(){$("#app").classList.remove("wide");
  <input placeholder="Buscar por cliente, teléfono, equipo, N°…" value="${esc(q)}" oninput="q=this.value;list();this.focus()">
  <div class="chips">${["Activos",...ESTADOS,"Todos"].map(e=>`<button class="s ${e===filtro?"on":""}" onclick="filtro='${e}';list()">${e}</button>`).join("")}</div>
  ${L.map(o=>`<div class="card it" onclick="abrir('${o.id}')"><div class="row" style="justify-content:space-between"><b>#${o.num} · ${esc(o.cliente)}</b><span><span class="tag ${o.estado}">${o.estado}</span></span></div>
- <div>${esc(o.equipo)} ${esc(o.marca)}</div><div class="mu">${esc([(o.fallas||[]).join(", "),o.falla].filter(Boolean).join(". ")).slice(0,90)} · Ingreso ${fd(o.entrada)} · 📷 ${(o.fotos||[]).length}</div></div>`).join("")||'<p class="mu">Sin equipos para mostrar.</p>'}<button class="fab" onclick="nuevo()">+</button>`}
+ <div>${esc(o.equipo)} ${esc(o.marca)}</div><div class="mu">${esc([(o.fallas||[]).join(", "),o.falla].filter(Boolean).join(". ")).slice(0,90)} · Ingreso ${fd(o.entrada)}${CFG.usarFotos?" · 📷 "+(o.fotos||[]).length:""}</div></div>`).join("")||'<p class="mu">Sin equipos para mostrar.</p>'}<button class="fab" onclick="nuevo()">+</button>`}
 
 function nuevo(){const n=Math.max(0,...orders.map(o=>o.num||0))+1;
  cur={num:n,estado:"Recibido",entrada:Date.now(),fotos:[],chk:[],fallas:[],acc:[],firma:"",patron:"",clave:"",garantia:CFG.garantia,cliente:"",tel:"",equipo:"Celular",marca:"",serie:"",falla:"",accesorios:"",clave:"",presupuesto:"",sena:"",trabajo:"",salida:null};view="form";dirty=false;form(true)}
@@ -84,11 +85,11 @@ function form(isNew){$("#app").classList.add("wide");
  <label>Patrón (tocá los puntos en orden)</label><div class="row" style="align-items:center;flex-wrap:nowrap"><div id="pg" style="display:grid;grid-template-columns:repeat(3,46px);gap:14px;flex:0 0 auto;min-width:0">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="s ${(cur.patron||"").split("-").includes(String(n))?"on":""}" style="padding:0;width:46px;height:46px;border-radius:50%" onclick="pat(${n})">${n}</button>`).join("")}</div>
  <div style="flex:1;min-width:0"><div class="mu">Secuencia</div><div id="pv" style="font-size:20px;margin:4px 0 10px">${cur.patron||"—"}</div><button class="s" onclick="pat(0)">Borrar patrón</button></div></div></div>
  <div class="card"><b>🔍 Condición al recibirlo</b><div class="mu">Cómo llega el equipo físicamente</div>${chips("chk",CHK)}</div>
- <div class="card"><b>📷 Registro fotográfico</b><div class="ph" id="ph"></div><label>Agregar fotos (cámara o galería)</label>
- <input type="file" accept="image/*" multiple onchange="subir(this.files)"><div class="mu" id="up"></div></div>
+ ${CFG.usarFotos?`<div class="card"><b>📷 Registro fotográfico</b><div class="ph" id="ph"></div><label>Agregar fotos (cámara o galería)</label>
+ <input type="file" accept="image/*" multiple onchange="subir(this.files)"><div class="mu" id="up"></div></div>`:""}
  </div></div>
  <div class="acts"><div class="row"><button onclick="guardar()">💾 Guardar</button><button class="s" onclick="pdf(false)">📄 PDF</button><button class="s" onclick="pdf(true)">💬 PDF + WhatsApp</button><button class="s" onclick="avisar()">📲 Avisar</button><button class="s" onclick="etiqueta()">🏷️ Etiqueta</button><button class="s" onclick="ticket()">🧾 Ticket 80mm</button>${cur.id?'<button class="d" onclick="borrar()">Eliminar</button>':""}</div><div class="mu" id="st" style="margin-top:8px"></div></div></div>`;
- fotos();firma();saldo();$("#app").oninput=$("#app").onchange=e=>{if(view==="form"&&!(e.target.closest&&e.target.closest("#sv")))dirty=true}}
+ if(CFG.usarFotos)fotos();firma();saldo();$("#app").oninput=$("#app").onchange=e=>{if(view==="form"&&!(e.target.closest&&e.target.closest("#sv")))dirty=true}}
 const CHK=["Pantalla rota","Vidrio trasero roto","Carcasa golpeada","Marco doblado","Mojado","Rayones"];
 const FALLAS=["No enciende","No carga","Pantalla / táctil","Cámara","Botones","Batería","Audio / parlante","Software / se traba"];
 const ACC=["Funda","SIM","Tarjeta SD","Cargador","Cable","Caja"];
@@ -122,7 +123,7 @@ let sec="equipos",reps=[],repCh=false,lastR="",fr="Todos",qr="",repMsg="";
 const RCAT=["Cámara","Micrófono","Parlante","Pantalla","Batería","Pin de carga","Flex","Tapa","Otro"];
 const tabs=()=>`<div class="chips" style="margin:0 0 10px"><button class="s ${sec==="equipos"?"on":""}" onclick="sec='equipos';list()">🔧 Equipos</button><button class="s ${sec==="repuestos"?"on":""}" onclick="sec='repuestos';list()">📦 Repuestos</button><button class="s" onclick="abrirCfg()">⚙️ Ajustes</button></div>`;
 function list(){sec==="repuestos"?listRep():listEq()}
-async function cargarRep(){const{data,error}=await sb.from("repuestos").select("id,data");if(error){repMsg="No se pudieron cargar los repuestos. Revisá tu conexión.";return}
+async function cargarRep(){const{data,error}=await todo("repuestos","id,data","id");if(error){repMsg="No se pudieron cargar los repuestos. Revisá tu conexión.";return}
  const d=data.map(r=>({...r.data,id:r.id})).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"")),j=JSON.stringify(d);repMsg="";if(j!==lastR){lastR=j;reps=d;repCh=true}}
 function listRep(keep){$("#app").classList.remove("wide");let L=reps.filter(r=>fr==="Todos"||r.cat===fr);if(qr){const t=qr.toLowerCase();L=L.filter(r=>[r.nombre,r.modelo,r.cat].join(" ").toLowerCase().includes(t))}
  const pz=reps.reduce((a,r)=>a+(+r.cant||0),0),vc=reps.reduce((a,r)=>a+(+r.cant||0)*(+r.costo||0),0),vv=reps.reduce((a,r)=>a+(+r.cant||0)*(+r.precio||0),0),m=n=>"$"+Math.round(n).toLocaleString("es-AR");
@@ -131,7 +132,7 @@ function listRep(keep){$("#app").classList.remove("wide");let L=reps.filter(r=>f
  <input placeholder="Buscar repuesto, modelo…" value="${esc(qr)}" oninput="qr=this.value;listRep(true)">
  <div class="chips">${["Todos",...RCAT].map(e=>`<button class="s ${e===fr?"on":""}" onclick="fr='${e}';listRep()">${e}</button>`).join("")}</div>
  <div class="mu" style="margin:0 4px 10px">${pz} piezas · Costo en stock ${m(vc)} · Valor de venta ${m(vv)}</div>
- ${L.map(r=>{const c=+r.cant||0;return `<div class="card it" onclick="abrirRep('${r.id}')"><div class="row" style="flex-wrap:nowrap;align-items:center">${r.foto?`<img src="${FU}${r.foto}" style="flex:0 0 56px;min-width:56px;width:56px;height:56px;object-fit:cover;border-radius:12px">`:""}<div style="min-width:0"><b>${esc(r.nombre)}</b><div class="mu">${esc(r.cat)}${r.modelo?" · "+esc(r.modelo):""}</div><div>${r.precio?"$"+esc(r.precio):'<span class="mu">Sin precio</span>'}${c===0?' <span class="tag" style="background:#d64545aa">Sin stock</span>':c<=1?' <span class="tag" style="background:#e0a030aa">Poco stock</span>':""}</div></div>
+ ${L.map(r=>{const c=+r.cant||0;return `<div class="card it" onclick="abrirRep('${r.id}')"><div class="row" style="flex-wrap:nowrap;align-items:center">${CFG.usarFotos&&r.foto?`<img src="${FU}${r.foto}" style="flex:0 0 56px;min-width:56px;width:56px;height:56px;object-fit:cover;border-radius:12px">`:""}<div style="min-width:0"><b>${esc(r.nombre)}</b><div class="mu">${esc(r.cat)}${r.modelo?" · "+esc(r.modelo):""}</div><div>${r.precio?"$"+esc(r.precio):'<span class="mu">Sin precio</span>'}${c===0?' <span class="tag" style="background:#d64545aa">Sin stock</span>':c<=1?' <span class="tag" style="background:#e0a030aa">Poco stock</span>':""}</div></div>
  <div style="flex:0 0 auto;min-width:0;display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()"><button class="s" style="padding:0;width:38px;min-height:38px" onclick="ajustar('${r.id}',-1)">−</button><b style="min-width:22px;text-align:center">${c}</b><button class="s" style="padding:0;width:38px;min-height:38px" onclick="ajustar('${r.id}',1)">+</button></div></div></div>`}).join("")||'<p class="mu">Todavía no cargaste repuestos.</p>'}<button class="fab" onclick="nuevoRep()">+</button>`;
  if(keep){const i=$("#app input");i.focus();i.setSelectionRange(1e3,1e3)}}
 async function ajustar(id,d){const r=reps.find(x=>x.id===id);r.cant=Math.max(0,(+r.cant||0)+d);const{id:_,...dd}=r;await sb.from("repuestos").update({data:dd}).eq("id",id);lastR=JSON.stringify(reps);listRep()}
@@ -141,7 +142,7 @@ function rform(){$("#app").innerHTML=`<div class="top"><button class="s" onclick
  <div class="card">${F("nombre","Nombre (ej: Cámara trasera)")}<div class="row"><div><label>Categoría</label><select onchange="cur.cat=this.value">${RCAT.map(x=>`<option ${x===cur.cat?"selected":""}>${x}</option>`).join("")}</select></div>${F("modelo","Modelo compatible (ej: Samsung A32)")}</div>
  <div class="row">${F("cant","Cantidad","number")}${F("costo","Costo ($)","number")}${F("precio","Precio de venta ($)","number")}</div>
  <label>Notas</label><textarea oninput="cur.nota=this.value">${esc(cur.nota)}</textarea></div>
- <div class="card"><b>📷 Foto</b>${cur.foto?`<div class="ph"><div><img src="${FU}${cur.foto}"><i onclick="cur.foto='';dirty=true;rform()">×</i></div></div>`:""}<label>${cur.foto?"Cambiar foto":"Agregar foto"}</label><input type="file" accept="image/*" onchange="subirR(this.files[0])"><div class="mu" id="up"></div></div>
+ ${CFG.usarFotos?`<div class="card"><b>📷 Foto</b>${cur.foto?`<div class="ph"><div><img src="${FU}${cur.foto}"><i onclick="cur.foto='';dirty=true;rform()">×</i></div></div>`:""}<label>${cur.foto?"Cambiar foto":"Agregar foto"}</label><input type="file" accept="image/*" onchange="subirR(this.files[0])"><div class="mu" id="up"></div></div>`:""}
  <div class="row"><button onclick="guardarR()">💾 Guardar</button>${cur.id?'<button class="d" onclick="borrarRep()">Eliminar</button>':""}</div><div class="mu" id="st" style="margin-top:8px"></div>`;
  $("#app").oninput=$("#app").onchange=()=>{if(view==="rform")dirty=true}}
 async function subirR(f){if(!f)return;$("#up").textContent="Subiendo…";try{const b=await comprimir(f),n=NEG+"/"+crypto.randomUUID()+".jpg",{error}=await sb.storage.from("fotos").upload(n,b,{contentType:"image/jpeg"});if(error)throw error;cur.foto=n;dirty=true;rform()}catch(e){$("#up").textContent="Error al subir: "+(e.message||"")}}
@@ -173,7 +174,7 @@ function tkDraw(p,o){const W=80,M=4,w=W-2*M;let y=7;
  C("¡Gracias por elegirnos!",8.5,1);
  return y+4}
 async function ticket(){if(!await guardar())return;const o=cur,{jsPDF}=window.jspdf,t=new jsPDF({unit:"mm",format:[80,400]}),h=tkDraw(t,o),p=new jsPDF({unit:"mm",format:[80,Math.max(h,90)]});tkDraw(p,o);if(!await entregarPdf(p,`Ticket_${o.num}.pdf`))return;$("#st").textContent="✅ Ticket 80 mm listo"}
-const CFGD={nombre:"",tagline:"",direccion:"",instagram:"",telefono:"",garantia:"30",condiciones:"El equipo se retira presentando este comprobante. La garantía cubre el trabajo realizado y los repuestos colocados, y no cubre golpes, humedad ni mal uso posterior.",logo:""};
+const CFGD={usarFotos:false,nombre:"",tagline:"",direccion:"",instagram:"",telefono:"",garantia:"30",condiciones:"El equipo se retira presentando este comprobante. La garantía cubre el trabajo realizado y los repuestos colocados, y no cubre golpes, humedad ni mal uso posterior.",logo:""};
 let CFG={...CFGD};try{Object.assign(CFG,JSON.parse(localStorage.getItem("cfg")||"{}"))}catch(e){}
 const ICO="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#2fd6e6"/><path d="M20 22h24v6H20zM20 32h24v6H20zM20 42h14v6H20z" fill="#0a1418"/></svg>');
 const nomNeg=()=>CFG.nombre||NEGNOMBRE||"Mi negocio",LOGO=()=>CFG.logo?FU+CFG.logo:ICO,brand=()=>`<img class="lg" src="${LOGO()}" style="${CFG.logo?"border-radius:10px;object-fit:contain;box-shadow:none":""}"> ${esc(nomNeg())}`;
@@ -186,12 +187,48 @@ function cfgForm(){$("#app").classList.remove("wide");
  <div class="card"><b>🏪 Tu negocio</b>${F("nombre","Nombre del negocio")}${F("tagline","Frase debajo del nombre (opcional)")}<div class="row">${F("direccion","Dirección")}${F("instagram","Instagram")}</div></div>
  <div class="card"><b>🖼️ Logo</b><div class="row" style="align-items:center;flex-wrap:nowrap;margin-top:8px"><img src="${cur.logo?FU+cur.logo:ICO}" style="width:72px;height:72px;object-fit:contain;border-radius:14px;flex:0 0 72px;min-width:72px"><div style="min-width:0"><input type="file" accept="image/*" onchange="subirLogo(this.files[0])"><div class="mu" id="up">Mejor si es una imagen cuadrada.</div>${cur.logo?'<button class="s" style="margin-top:6px" onclick="cur.logo=\'\';dirty=true;cfgForm()">Quitar el logo</button>':""}</div></div></div>
  <div class="card"><b>🛡️ Garantía y condiciones</b>${F("garantia","Garantía por defecto (días)","number")}<label>Texto de condiciones (sale al pie del PDF)</label><textarea oninput="cur.condiciones=this.value">${esc(cur.condiciones)}</textarea></div>
+
+ <div class="card"><b>📷 Fotos</b><label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" style="width:auto" ${cur.usarFotos?"checked":""} onchange="cur.usarFotos=this.checked;dirty=true"> Registrar fotos de equipos y repuestos</label><div class="mu">Apagado: no se suben fotos ni se usa espacio de almacenamiento.</div></div>
+ <div class="card"><b>💾 Tus datos</b><div class="mu" style="margin:4px 0 8px">Descargá una copia en un archivo que abre Excel.</div><div class="row"><button class="s" onclick="exportar('equipos')">⬇️ Equipos</button><button class="s" onclick="exportar('repuestos')">⬇️ Repuestos</button></div></div>
+ <div class="card"><b>📥 Importar clientes / historial</b><div class="mu" style="margin:4px 0 8px">Subí un Excel guardado como CSV (de otro sistema o de una planilla). Cada fila entra como un equipo ya entregado, con los datos del cliente.</div>
+ <div class="row"><button class="s" onclick="plantillaCsv()">📄 Descargar plantilla</button></div><input type="file" accept=".csv,.txt,text/csv" onchange="leerCsv(this.files[0])" style="margin-top:8px"><div id="imp" style="margin-top:8px"></div></div>
  <div class="row"><button onclick="guardarCfg()">💾 Guardar</button></div><div class="mu" id="st" style="margin-top:8px"></div>`;
  $("#app").oninput=$("#app").onchange=()=>{if(view==="cfg")dirty=true}}
 async function subirLogo(f){if(!f)return;const u=$("#up");u.textContent="Subiendo…";try{const b=await new Promise((ok,no)=>{const im=new Image();im.onload=()=>{const k=Math.min(1,512/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(ok,"image/png")};im.onerror=no;im.src=URL.createObjectURL(f)});
  const n=NEG+"/logo-"+crypto.randomUUID()+".png",{error}=await sb.storage.from("fotos").upload(n,b,{contentType:"image/png"});if(error)throw error;cur.logo=n;dirty=true;cfgForm()}catch(e){u.textContent="Error al subir: "+(e.message||"")}}
 async function guardarCfg(){if(!(cur.nombre||"").trim()){$("#st").textContent="Falta el nombre del negocio.";return}
  const d={...CFGD,...cur};try{const{error}=await sb.from("config").upsert({negocio_id:NEG,data:d});if(error)throw error;CFG=d;try{localStorage.setItem("cfg",JSON.stringify(CFG))}catch(e){}document.title=nomNeg();dirty=false;$("#st").textContent="✅ Guardado"}catch(e){$("#st").textContent="Error al guardar: "+(e.message||"")+""}}
+// ===== Exportar e importar (CSV) =====
+function csvCell(v){v=v==null?"":Array.isArray(v)?v.join(" / "):String(v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function bajarCsv(nombre,filas){const t="﻿"+filas.map(f=>f.map(csvCell).join(";")).join("\r\n"),b=new Blob([t],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000)}
+async function exportar(que){const st=$("#st");st.textContent="Preparando archivo…";try{
+ if(que==="equipos"){const{data,error}=await todo("ordenes","num,data","num");if(error)throw error;
+  bajarCsv("equipos.csv",[["N°","Fecha ingreso","Estado","Cliente","DNI","Teléfono","Equipo","Marca","Modelo","IMEI / Serie","Falla","Trabajo realizado","Presupuesto","Seña","Garantía (días)"],...data.map(r=>{const o=r.data||{};return[r.num,o.entrada?new Date(o.entrada).toLocaleDateString("es-AR"):"",o.estado,o.cliente,o.dni,o.tel,o.equipo,o.marca,o.modelo,o.serie,[(o.fallas||[]).join(", "),o.falla].filter(Boolean).join(". "),o.trabajo,o.presupuesto,o.sena,o.garantia]})])}
+ else{const{data,error}=await todo("repuestos","id,data","id");if(error)throw error;
+  bajarCsv("repuestos.csv",[["Nombre","Categoría","Modelo","Cantidad","Costo","Precio","Nota"],...data.map(r=>{const o=r.data||{};return[o.nombre,o.cat,o.modelo,o.cant,o.costo,o.precio,o.nota]})])}
+ st.textContent="✅ Archivo descargado"}catch(e){st.textContent="Error al exportar: "+(e.message||"")}}
+function plantillaCsv(){bajarCsv("plantilla-importar.csv",[["Cliente","Teléfono","DNI","Equipo","Marca","Modelo","Falla","Trabajo","Presupuesto","Seña","Fecha"],["Juan Pérez","1155551234","30111222","Celular","Samsung","A12","No carga","Cambio de pin de carga","25000","10000","15/03/2024"]])}
+function parseCsv(t){t=t.replace(/^﻿/,"");const l1=t.split(/\r?\n/,1)[0],cnt=c=>l1.split(c).length-1,d=[";",",","\t"].sort((a,b)=>cnt(b)-cnt(a))[0],R=[];let f="",r=[],q=false;
+ for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===d){r.push(f);f=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&t[i+1]==="\n")i++;r.push(f);f="";if(r.some(x=>x.trim()))R.push(r);r=[]}else f+=c}
+ r.push(f);if(r.some(x=>x.trim()))R.push(r);return R}
+const nk=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/g,"");
+const ALIAS={cliente:["cliente","nombre","nombreyapellido","apellidoynombre","nombrecompleto","razonsocial","name"],tel:["telefono","tel","celular","whatsapp","movil","phone","telefonowhatsapp"],dni:["dni","documento","cuit","cuil"],equipo:["equipo","tipo","tipodeequipo","dispositivo"],marca:["marca"],modelo:["modelo"],serie:["imei","serie","nserie","imeinserie","imeiserie"],falla:["falla","problema","motivo","descripcion","detalle","observaciones"],trabajo:["trabajo","trabajorealizado","reparacion","diagnostico"],presupuesto:["presupuesto","total","precio","importe","monto"],sena:["sena","adelanto","pagado","cobrado"],entrada:["fecha","fechaingreso","ingreso","fechaentrada","date"],estado:["estado"]};
+function fechaMs(v){v=String(v||"").trim();let m=v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);if(m){let y=+m[3];if(y<100)y+=2000;const t=new Date(y,+m[2]-1,+m[1],12).getTime();return isNaN(t)?null:t}m=v.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);if(m){const t=new Date(+m[1],+m[2]-1,+m[3],12).getTime();return isNaN(t)?null:t}return null}
+const clave=o=>nk(o.cliente)+"|"+String(o.tel||"").replace(/\D/g,"")+"|"+(o.entrada?new Date(o.entrada).toISOString().slice(0,10):"");
+let IMP=[];
+function leerCsv(f){if(!f)return;const box=$("#imp");box.textContent="Leyendo…";const rd=new FileReader();rd.onerror=()=>box.textContent="No se pudo leer el archivo.";rd.onload=()=>{try{
+ const R=parseCsv(String(rd.result));if(R.length<2){box.textContent="El archivo está vacío o no tiene filas de datos.";return}
+ const H=R[0].map(nk),idx={};for(const k in ALIAS){const i=H.findIndex(h=>ALIAS[k].includes(h));if(i>=0)idx[k]=i}
+ if(idx.cliente==null&&idx.tel==null){box.innerHTML='<span style="color:#ff8a8a">No encontré una columna de cliente o teléfono. Revisá que la primera fila tenga los títulos (por ejemplo: Cliente, Teléfono). Descargá la plantilla para ver el formato.</span>';return}
+ const ex=new Set(orders.map(clave));let rows=[],dup=0,vac=0;
+ for(const r of R.slice(1)){const g=k=>idx[k]==null?"":String(r[idx[k]]||"").trim(),o={cliente:g("cliente"),tel:g("tel"),dni:g("dni"),equipo:g("equipo")||"Celular",marca:[g("marca"),g("modelo")].filter(Boolean).join(" "),serie:g("serie"),falla:g("falla"),trabajo:g("trabajo"),presupuesto:g("presupuesto").replace(/[^\d.,-]/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",","."),sena:g("sena").replace(/[^\d.,-]/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",","."),entrada:fechaMs(g("entrada"))||Date.now(),estado:ESTADOS.find(e=>nk(e)===nk(g("estado")))||"Entregado",fotos:[],chk:[],fallas:[],acc:[],firma:"",patron:"",clave:"",accesorios:"",garantia:CFG.garantia,salida:null};
+  if(!o.cliente&&!o.tel){vac++;continue}if(!o.cliente)o.cliente="Sin nombre";const k=clave(o);if(ex.has(k)){dup++;continue}ex.add(k);rows.push(o)}
+ rows.sort((a,b)=>a.entrada-b.entrada);IMP=rows;
+ const mapeo=Object.keys(idx).map(k=>k).join(", ");
+ box.innerHTML=`<div class="mu">Columnas reconocidas: <b>${esc(mapeo)}</b></div><div style="margin:6px 0"><b>${rows.length}</b> para importar${dup?` · ${dup} repetidos (se saltean)`:""}${vac?` · ${vac} filas sin cliente ni teléfono (se saltean)`:""}</div>`+
+  (rows.length?`<div class="mu" style="margin-bottom:6px">Vista previa: ${rows.slice(0,3).map(o=>esc(o.cliente)+" ("+esc(o.equipo+" "+o.marca).trim()+")").join(" · ")}${rows.length>3?" …":""}</div><button onclick="importar()">Importar ${rows.length}</button>`:"")}catch(e){box.textContent="Error al leer el archivo: "+(e.message||"")}};rd.readAsText(f)}
+async function importar(){if(!IMP.length)return;const box=$("#imp"),n=IMP.length;let hechos=0;try{for(let i=0;i<n;i+=200){const lote=IMP.slice(i,i+200).map(d=>({data:d}));const{error}=await sb.from("ordenes").insert(lote);if(error)throw error;hechos+=lote.length;box.textContent="Importando… "+hechos+" de "+n}
+ IMP=[];last="";await cargar();box.innerHTML="✅ Se importaron "+hechos+" registros. Los vas a ver en Equipos, en estado Entregado."}catch(e){box.textContent="Se importaron "+hechos+" de "+n+" y después falló: "+(e.message||"")+". Volvé a subir el mismo archivo: los ya importados se saltean."}}
 async function entregarPdf(doc,name){const blob=doc.output("blob"),f=new File([blob],name,{type:"application/pdf"}),movil=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
  if(movil&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return true}catch(e){if(e&&e.name==="AbortError")return false}}
  const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=name;a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
@@ -254,7 +291,7 @@ async function pdf(wsp){if(!await guardar())return;$("#st").textContent="Generan
  else{st(10,0);TC(col.mu);p.text("Presupuesto a confirmar",px+5,y+22)}
  y+=hh+5;
  // Fotos
- const fs=(o.fotos||[]).slice(0,8);
+ const fs=CFG.usarFotos?(o.fotos||[]).slice(0,8):[];
  if(fs.length){const n=4,g=4,z=(CW-g*(n-1))/n;ensure(z+14);FL(col.te);RR(M+1,y,1.6,4.6,.8,"F");st(8.5,1);TC(col.mu);p.text("REGISTRO FOTOGRÁFICO",M+5,y+3.8);y+=8;let i=0;
   for(const f of fs){const d=await b64(f);if(!d)continue;const k=i%n;if(k===0){if(i>0)y+=z+g;ensure(z+2)}const x=M+k*(z+g);FL(col.bg);DR(col.bd);p.setLineWidth(.3);RR(x,y,z,z,2,"FD");
    try{const ip=p.getImageProperties(d),r=Math.min(z/ip.width,z/ip.height),iw=ip.width*r,ih=ip.height*r;p.addImage(d,"JPEG",x+(z-iw)/2,y+(z-ih)/2,iw,ih)}catch(e){}i++}
