@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Administración</title>
+<link rel="icon" href="/icon-192.png"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0a1418"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="/supabase.js"></script><script src="/config.js"></script>
+<style>
+
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--tx:#f2fbff;--mu:#a9c4cf;--g:rgba(255,255,255,.12);--gb:rgba(255,255,255,.28);--ac:#2fd6e6;--ac2:#7be36a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--tx);font:15px -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+background:radial-gradient(60% 40% at 15% 10%,#12a5b8aa,transparent 70%),radial-gradient(50% 40% at 90% 30%,#4bc25a88,transparent 70%),radial-gradient(60% 50% at 30% 100%,#1b5fd188,transparent 70%),#0a1418;background-attachment:fixed}
+.w{max-width:900px;margin:0 auto;padding:14px}
+h1{font-size:21px;margin:0;display:flex;align-items:center;gap:10px}.lg{width:40px;height:40px;border-radius:50%;box-shadow:0 0 18px #2fd6e688}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}
+.card,input,select,textarea,.chips button.s,button.s{background:var(--g);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border:1px solid var(--gb);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 28px rgba(0,0,0,.28)}
+.card{border-radius:22px;padding:14px;margin-bottom:12px}
+button,.btn{background:linear-gradient(135deg,#2fd6e6cc,#7be36acc);color:#04222a;font-weight:600;border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 6px 18px rgba(47,214,230,.3);transition:transform .15s}
+button:active{transform:scale(.96)}
+button.s{color:var(--tx);font-weight:500}button.d{background:linear-gradient(135deg,#ff6b6bcc,#d64545cc);color:#fff}
+input,select,textarea{width:100%;padding:11px 14px;border-radius:14px;color:var(--tx);font:inherit;outline:none;box-shadow:inset 0 1px 3px rgba(0,0,0,.25)}
+input:focus,select:focus,textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px #2fd6e644}
+::placeholder{color:var(--mu)}option{color:#000}textarea{min-height:72px}
+label{display:block;font-size:12px;color:var(--mu);margin:10px 0 4px 4px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
+.it{cursor:pointer;transition:transform .15s}.it:active{transform:scale(.985)}.it b{font-size:16px}.mu{color:var(--mu);font-size:13px}
+.tag{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;background:var(--g);border:1px solid var(--gb);backdrop-filter:blur(10px)}
+.tag.Recibido{background:#2f8fe6aa}.tag.Listo{background:#3cc46eaa}.tag.Entregado{background:#8896a0aa}
+.ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:8px}
+.ph div{position:relative}.ph img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:16px;border:1px solid var(--gb)}
+.ph i{position:absolute;top:4px;right:4px;background:#000a;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-style:normal;cursor:pointer}
+.chips{display:flex;gap:6px;overflow-x:auto;margin:10px 0;padding-bottom:4px}.chips button{white-space:nowrap;padding:7px 14px}
+.chips button.s.on{background:linear-gradient(135deg,#2fd6e6cc,#7be36acc);color:#04222a;font-weight:600}
+.w{padding-bottom:100px}button{min-height:44px}.chips button{min-height:38px}.fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:62px;height:62px;padding:0;font-size:34px;line-height:1;border-radius:50%;z-index:10}
+#pg button.on{background:linear-gradient(135deg,#2fd6e6cc,#7be36acc);color:#04222a}
+.w.wide{max-width:1240px}
+.row>.sm{min-width:0;flex:0 1 auto;padding:9px 16px}
+@media(min-width:1000px){.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.fm{display:flex;flex-direction:column}.acts{order:-1;position:sticky;top:0;z-index:5;padding:10px;margin-bottom:10px;border-radius:20px;background:rgba(10,20,24,.55);backdrop-filter:blur(18px);border:1px solid var(--gb)}.acts .row>*{min-width:0;flex:1 1 auto;padding:10px 12px}}
+
+.w{max-width:1000px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.stats .card{margin:0;text-align:center}.stats b{font-size:28px;display:block}
+.tag.ok{background:#3cc46eaa}.tag.off{background:#d64545aa}
+.em{display:inline-flex;align-items:center;gap:6px;margin:3px 6px 3px 0;padding:3px 4px 3px 11px;border-radius:99px;background:var(--g);border:1px solid var(--gb);font-size:13px}
+.em button{min-height:28px;padding:2px 9px;font-size:12px}
+.neg .row{align-items:center}.neg .row>*{min-width:0;flex:0 1 auto}
+.cred{border-color:var(--ac2);background:rgba(123,227,106,.14)}
+.cred pre{white-space:pre-wrap;word-break:break-word;margin:8px 0;font:14px/1.5 ui-monospace,Consolas,monospace}
+@media(max-width:600px){.neg .row>button{flex:1 1 auto}}
+</style></head><body><div class="w" id="app"></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let NEGS=[],q="",cred=null,msg="",fN="",fE="",fP="",busy=false;
+const fd=t=>t?new Date(t).toLocaleDateString("es-AR"):"—",fdt=t=>t?new Date(t).toLocaleString("es-AR",{dateStyle:"short",timeStyle:"short"}):"Sin actividad";
+function gen(){const a="abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(12);crypto.getRandomValues(r);return Array.from(r,x=>a[x%a.length]).join("")}
+async function init(){try{const{data:{session}}=await sb.auth.getSession();if(!session)return login();
+ const{data,error}=await sb.rpc("es_admin");if(error||data!==true)return noAdmin();await cargar()}catch(e){login("No se pudo conectar. Revisá config.js.")}}
+function login(m){$("#app").innerHTML=`<div style="min-height:80vh;display:flex;align-items:center;justify-content:center"><div class="card" style="width:100%;max-width:360px"><h1>🛠️ Administración</h1><label>Email</label><input id="em" type="email"><label>Contraseña</label><input id="pw" type="password" onkeydown="if(event.key==='Enter')entrar()"><br><br><button onclick="entrar()">Entrar</button><div class="mu" style="margin-top:8px">${esc(m||"")}</div></div></div>`}
+async function entrar(){const{error}=await sb.auth.signInWithPassword({email:$("#em").value,password:$("#pw").value});if(error)return login("Datos incorrectos");init()}
+function noAdmin(){$("#app").innerHTML=`<div style="min-height:80vh;display:flex;align-items:center;justify-content:center"><div class="card" style="max-width:380px;text-align:center"><h2>Esta cuenta no es de administrador</h2><p class="mu">Entrá con la cuenta que registraste como administrador.</p><button onclick="salir()">Salir</button></div></div>`}
+async function salir(){await sb.auth.signOut();NEGS=[];cred=null;login()}
+async function cargar(){const{data,error}=await sb.rpc("admin_listar");if(error){msg="No se pudo cargar: "+error.message}else{NEGS=data||[];msg=""}render()}
+function render(){const act=NEGS.filter(n=>n.activo).length,ord=NEGS.reduce((a,n)=>a+(+n.ordenes||0),0);
+ $("#app").innerHTML=`<div class="top"><h1>🛠️ Administración</h1><div class="row" style="flex:0 0 auto;flex-wrap:nowrap"><button class="s sm" data-a="recargar">🔄 Actualizar</button><button class="s sm" data-a="salir">Salir</button></div></div>
+ <div class="stats"><div class="card"><b>${NEGS.length}</b><span class="mu">Negocios</span></div><div class="card"><b>${act}</b><span class="mu">Activos</span></div><div class="card"><b>${NEGS.length-act}</b><span class="mu">Suspendidos</span></div><div class="card"><b>${ord}</b><span class="mu">Equipos cargados</span></div></div>
+ <div class="card"><b>➕ Nuevo cliente</b><div class="row"><div><label>Nombre del negocio</label><input id="fn" value="${esc(fN)}" oninput="fN=this.value"></div><div><label>Email del cliente</label><input id="fe" type="email" value="${esc(fE)}" oninput="fE=this.value"></div></div>
+ <div class="row" style="align-items:flex-end"><div><label>Contraseña (mínimo 8)</label><input id="fp" value="${esc(fP)}" oninput="fP=this.value"></div><button class="s sm" data-a="gen">🎲 Generar</button><button data-a="crear" id="bc">Crear cliente</button></div><div class="mu" id="m1" style="margin-top:8px">${esc(msg)}</div></div>
+ <div id="cred"></div>
+ <input id="bq" placeholder="Buscar negocio o email…" value="${esc(q)}" oninput="q=this.value;lista()" style="margin-bottom:12px"><div id="lista"></div>`;
+ credBox();lista()}
+function credBox(){const b=$("#cred");if(!b)return;if(!cred){b.innerHTML="";return}
+ b.innerHTML=`<div class="card cred"><b>✅ ${esc(cred.titulo)}</b><div class="mu">Copiá este mensaje y mandáselo al cliente. La contraseña no se vuelve a mostrar.</div><pre id="txt">${esc(cred.texto)}</pre><div class="row"><button data-a="copiar">📋 Copiar mensaje</button><button class="s" data-a="cerrarcred">Cerrar</button></div></div>`}
+function lista(){const t=q.trim().toLowerCase(),L=NEGS.filter(n=>!t||n.nombre.toLowerCase().includes(t)||(n.usuarios||[]).some(u=>u.toLowerCase().includes(t)));
+ $("#lista").innerHTML=L.map(n=>`<div class="card neg"><div class="row"><b style="font-size:17px">${esc(n.nombre)}</b><span class="tag ${n.activo?"ok":"off"}">${n.activo?"Activo":"Suspendido"}</span></div>
+ <div class="mu" style="margin:6px 0">Alta: ${fd(n.creado)} · ${+n.ordenes||0} equipos · Última actividad: ${fdt(n.ultima)}</div>
+ <div>${(n.usuarios||[]).map(u=>`<span class="em">${esc(u)}<button class="s" data-a="clave" data-email="${esc(u)}" title="Cambiar contraseña">🔑</button></span>`).join("")||'<span class="mu">Sin usuarios</span>'}</div>
+ <div class="row" style="margin-top:8px"><button class="s sm" data-a="usuario" data-id="${esc(n.id)}" data-nom="${esc(n.nombre)}">👤 Agregar usuario</button><button class="${n.activo?"s":""} sm" data-a="estado" data-id="${esc(n.id)}" data-nom="${esc(n.nombre)}" data-on="${n.activo?1:0}">${n.activo?"⏸️ Suspender":"▶️ Reactivar"}</button></div></div>`).join("")||`<p class="mu">${NEGS.length?"Sin resultados.":"Todavía no hay negocios. Creá el primero arriba."}</p>`}
+function textoCred(email,pw,nombre){return `¡Hola! Ya tenés tu sistema de gestión${nombre?" para "+nombre:""} listo.\n\n🔗 Entrá en: ${location.origin}/\n📧 Usuario: ${email}\n🔑 Contraseña: ${pw}\n\nAl entrar, andá a ⚙️ Ajustes para cargar tu logo, tu garantía y tus condiciones. Ahí mismo podés cambiar tu contraseña.`}
+async function fn(body){const{data,error}=await sb.functions.invoke("admin",{body});if(error){let m=error.message||"Error";try{const j=await error.context.json();if(j&&j.error)m=j.error}catch(e){}throw new Error(m)}if(data&&data.error)throw new Error(data.error);return data}
+async function crear(){if(busy)return;const m=$("#m1");fN=$("#fn").value;fE=$("#fe").value;fP=$("#fp").value;
+ if(!fN.trim()||!fE.trim()||fP.length<8){m.textContent="Completá nombre, email y una contraseña de al menos 8 caracteres.";return}
+ busy=true;m.textContent="Creando…";try{await fn({action:"crear",nombre:fN.trim(),email:fE.trim(),password:fP});cred={titulo:"Cliente creado: "+fN.trim(),texto:textoCred(fE.trim().toLowerCase(),fP,fN.trim())};fN=fE=fP="";msg="";await cargar()}catch(e){m.textContent="No se pudo crear: "+e.message}busy=false}
+async function usuario(id,nom){const email=prompt("Email del nuevo usuario de "+nom+":");if(!email)return;const pw=prompt("Contraseña (mínimo 8). Podés usar esta sugerida:",gen());if(!pw)return;
+ try{await fn({action:"usuario",negocio:id,email:email.trim(),password:pw});cred={titulo:"Usuario agregado a "+nom,texto:textoCred(email.trim().toLowerCase(),pw,nom)};await cargar();scrollTo(0,0)}catch(e){alert("No se pudo agregar: "+e.message)}}
+async function clave(email){const pw=prompt("Nueva contraseña para "+email+" (mínimo 8). Podés usar esta sugerida:",gen());if(!pw)return;
+ try{await fn({action:"clave",email,password:pw});cred={titulo:"Contraseña cambiada: "+email,texto:textoCred(email,pw,"")};credBox();scrollTo(0,0)}catch(e){alert("No se pudo cambiar: "+e.message)}}
+async function estado(id,nom,on){if(on&&!confirm("¿Suspender a "+nom+"? No podrán entrar hasta que lo reactives. Sus datos no se borran."))return;
+ const{error}=await sb.rpc("admin_estado",{p_negocio:id,p_activo:!on});if(error){alert("No se pudo cambiar: "+error.message);return}await cargar()}
+async function copiar(){const t=cred&&cred.texto;if(!t)return;try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy")}catch(_){}a.remove()}const b=document.querySelector('[data-a=copiar]');if(b)b.textContent="✅ Copiado"}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const d=b.dataset;
+ ({recargar:cargar,salir,gen:()=>{fP=gen();const i=$("#fp");if(i)i.value=fP},crear,copiar,cerrarcred:()=>{cred=null;credBox()},
+   clave:()=>clave(d.email),usuario:()=>usuario(d.id,d.nom),estado:()=>estado(d.id,d.nom,d.on==="1")})[d.a]?.()});
+init();
+</script></body></html>
